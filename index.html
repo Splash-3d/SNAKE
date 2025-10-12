@@ -640,21 +640,48 @@
           return element.closest('.btn, .option-item, button, input, select, textarea, a[href]');
         }
 
-        document.body.addEventListener('pointerup', (e) => {
-          if (isInteractiveElement(e.target) || gameStarted) return;
-          if (!gameStarted) initGame();
-        }, { passive: true });
+        let touchStartX = 0;
+        let touchStartY = 0;
 
-        document.body.addEventListener('touchend', (e) => {
-          if (isInteractiveElement(e.target) || gameStarted) return;
-          if (!gameStarted) initGame();
+        document.body.addEventListener('touchstart', (e) => {
+          if (isInteractiveElement(e.target)) return;
+          touchStartX = e.touches[0].clientX;
+          touchStartY = e.touches[0].clientY;
           e.preventDefault();
         }, { passive: false });
 
-        document.body.addEventListener('mouseup', (e) => {
-          if (isInteractiveElement(e.target) || gameStarted) return;
-          if (!gameStarted) initGame();
-        });
+        document.body.addEventListener('touchend', (e) => {
+          if (isInteractiveElement(e.target)) return;
+          if (!touchStartX || !touchStartY) return;
+
+          const touchEndX = e.changedTouches[0].clientX;
+          const touchEndY = e.changedTouches[0].clientY;
+          const dx = touchEndX - touchStartX;
+          const dy = touchEndY - touchStartY;
+
+          const minSwipe = 25; // Umbral mínimo para considerar un swipe
+
+          if (Math.abs(dx) < minSwipe && Math.abs(dy) < minSwipe) {
+            // Toque simple: iniciar el juego si no ha comenzado
+            if (!gameStarted) {
+              initGame();
+            }
+          } else {
+            // Deslizamiento: mover la serpiente (siempre que el juego esté corriendo)
+            let dir;
+            if (Math.abs(dx) > Math.abs(dy)) {
+              dir = dx > 0 ? 'right' : 'left';
+            } else {
+              dir = dy > 0 ? 'down' : 'up';
+            }
+            handleDirection(dir);
+          }
+
+          // Resetear
+          touchStartX = 0;
+          touchStartY = 0;
+          e.preventDefault();
+        }, { passive: false });
       }
 
       // === PERSONALIZACIÓN ===

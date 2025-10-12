@@ -636,22 +636,36 @@
           if (dir) handleDirection(dir);
         });
       } else {
-        function isInteractiveElement(element) {
-          return element.closest('.btn, .option-item, button, input, select, textarea, a[href]');
-        }
-
         let touchStartX = 0;
         let touchStartY = 0;
+        let isSwiping = false;
 
-        document.body.addEventListener('touchstart', (e) => {
-          if (isInteractiveElement(e.target)) return;
+        canvas.addEventListener('touchstart', (e) => {
+          e.preventDefault();
           touchStartX = e.touches[0].clientX;
           touchStartY = e.touches[0].clientY;
-          e.preventDefault();
+          isSwiping = false;
         }, { passive: false });
 
-        document.body.addEventListener('touchend', (e) => {
-          if (isInteractiveElement(e.target)) return;
+        canvas.addEventListener('touchmove', (e) => {
+          e.preventDefault();
+          if (!gameStarted || !gameRunning) return;
+
+          const currentX = e.touches[0].clientX;
+          const currentY = e.touches[0].clientY;
+          const dx = currentX - touchStartX;
+          const dy = currentY - touchStartY;
+
+          const minSwipe = 25;
+
+          if (Math.abs(dx) > minSwipe || Math.abs(dy) > minSwipe) {
+            isSwiping = true;
+          }
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', (e) => {
+          e.preventDefault();
+
           if (!touchStartX || !touchStartY) return;
 
           const touchEndX = e.changedTouches[0].clientX;
@@ -659,15 +673,13 @@
           const dx = touchEndX - touchStartX;
           const dy = touchEndY - touchStartY;
 
-          const minSwipe = 25; // Umbral mínimo para considerar un swipe
+          const minSwipe = 25;
 
           if (Math.abs(dx) < minSwipe && Math.abs(dy) < minSwipe) {
-            // Toque simple: iniciar el juego si no ha comenzado
             if (!gameStarted) {
               initGame();
             }
-          } else {
-            // Deslizamiento: mover la serpiente (siempre que el juego esté corriendo)
+          } else if (isSwiping) {
             let dir;
             if (Math.abs(dx) > Math.abs(dy)) {
               dir = dx > 0 ? 'right' : 'left';
@@ -677,10 +689,9 @@
             handleDirection(dir);
           }
 
-          // Resetear
           touchStartX = 0;
           touchStartY = 0;
-          e.preventDefault();
+          isSwiping = false;
         }, { passive: false });
       }
 

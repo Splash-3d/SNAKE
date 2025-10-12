@@ -10,7 +10,7 @@
       margin: 0;
       padding: 0;
       box-sizing: border-box;
-      touch-action: manipulation;
+      touch-action: none; /* Cambiado de 'manipulation' a 'none' */
     }
 
     body {
@@ -326,12 +326,12 @@
       { icon: '🍑', color: '#ff9e80' }
     ];
 
-    // ✅ Niveles de velocidad
+    // ✅ Niveles de velocidad - ¡DEMENCIAL AHORA ES MÁS RÁPIDO!
     const speedLevels = [
       { name: 'Fácil', value: 200 },
       { name: 'Medio', value: 140 },
       { name: 'Difícil', value: 100 },
-      { name: 'Demencial', value: 70 }
+      { name: 'Demencial', value: 45 } // ¡Reducido de 70 a 45 para ser realmente demencial!
     ];
 
     let selectedSnakeColor = colorPresets[0].value;
@@ -346,12 +346,17 @@
     let direction = 'right';
     let nextDirection = 'right';
     let score = 0;
-    let highScore = localStorage.getItem('neonSerpentHighScore') || 0;
+    let highScore = parseInt(localStorage.getItem('neonSerpentHighScore')) || 0;
     let gameRunning = false;
     let gameStarted = false;
     const gridSize = 20;
     let lastUpdateTime = 0;
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    // ✅ DETECCIÓN UNIVERSAL DE DISPOSITIVOS TÁCTILES
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet/i.test(navigator.userAgent) || 
+                    ('ontouchstart' in window) || 
+                    (navigator.maxTouchPoints > 0) || 
+                    (navigator.msMaxTouchPoints > 0);
 
     // === INICIALIZAR CUANDO EL DOM ESTÉ LISTO ===
     document.addEventListener('DOMContentLoaded', () => {
@@ -362,6 +367,13 @@
       const startScreen = document.getElementById('startScreen');
       const gameOverScreen = document.getElementById('gameOverScreen');
       const restartBtn = document.getElementById('restartBtn');
+
+      // ✅ MANEJADOR DE INICIO DEL JUEGO UNIVERSAL
+      function tryStartGame() {
+        if (!gameStarted && !gameRunning) {
+          initGame();
+        }
+      }
 
       // === FUNCIONES DEL JUEGO ===
       function setupGame() {
@@ -377,6 +389,11 @@
 
         gridWidth = Math.floor(displayWidth / gridSize);
         gridHeight = Math.floor(displayHeight / gridSize);
+
+        // ✅ Verificar que la cuadrícula sea lo suficientemente grande
+        if (gridWidth < 10 || gridHeight < 10) {
+          return false;
+        }
 
         snake = [
           { x: Math.floor(gridWidth / 2), y: Math.floor(gridHeight / 2) },
@@ -582,7 +599,7 @@
         gameRunning = false;
         if (score > highScore) {
           highScore = score;
-          localStorage.setItem('neonSerpentHighScore', highScore);
+          localStorage.setItem('neonSerpentHighScore', highScore.toString());
         }
         finalScoreEl.textContent = `Puntuación: ${score}`;
         gameOverScreen.classList.add('active');
@@ -604,9 +621,6 @@
       }
 
       function handleDirection(dir) {
-        if (!gameStarted) {
-          initGame();
-        }
         if (!gameRunning) return;
 
         const opposites = { up: 'down', down: 'up', left: 'right', right: 'left' };
@@ -615,15 +629,24 @@
         }
       }
 
-      // === CONTROLES ===
-      if (!isMobile) {
-        // ✅ Iniciar con CUALQUIER tecla en escritorio
-        const startGameOnce = () => {
-          if (!gameStarted) initGame();
-        };
-        document.addEventListener('keydown', startGameOnce, { once: true });
+      // === CONTROLES CORREGIDOS ===
+      // ✅ DETECTOR UNIVERSAL DE INICIO (FUNCIONA EN TODOS LOS DISPOSITIVOS)
+      const startHandler = (e) => {
+        if (!gameStarted && !gameRunning) {
+          // Prevenir comportamiento predeterminado en móviles
+          if (e.type === 'touchstart') {
+            e.preventDefault();
+          }
+          initGame();
+        }
+      };
 
-        // Movimiento con teclas específicas
+      // Añadir manejadores para ambos tipos de dispositivos
+      document.addEventListener('keydown', startHandler);
+      document.addEventListener('touchstart', startHandler, { passive: false });
+
+      // Movimiento en escritorio
+      if (!isMobile) {
         const keyMap = {
           'ArrowUp': 'up', 'w': 'up', 'W': 'up',
           'ArrowDown': 'down', 's': 'down', 'S': 'down',
@@ -632,54 +655,49 @@
         };
 
         document.addEventListener('keydown', (e) => {
-          const dir = keyMap[e.key];
-          if (dir) handleDirection(dir);
+          if (gameRunning) {
+            const dir = keyMap[e.key];
+            if (dir) handleDirection(dir);
+          }
         });
-      } else {
+      }
+
+      // Movimiento en móvil
+      if (isMobile) {
         let touchStartX = 0;
         let touchStartY = 0;
-        let isSwiping = false;
+        let isTouching = false;
 
         canvas.addEventListener('touchstart', (e) => {
-          e.preventDefault();
-          touchStartX = e.touches[0].clientX;
-          touchStartY = e.touches[0].clientY;
-          isSwiping = false;
+          if (gameRunning) {
+            e.preventDefault();
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            isTouching = true;
+          }
         }, { passive: false });
 
         canvas.addEventListener('touchmove', (e) => {
-          e.preventDefault();
-          if (!gameStarted || !gameRunning) return;
-
-          const currentX = e.touches[0].clientX;
-          const currentY = e.touches[0].clientY;
-          const dx = currentX - touchStartX;
-          const dy = currentY - touchStartY;
-
-          const minSwipe = 25;
-
-          if (Math.abs(dx) > minSwipe || Math.abs(dy) > minSwipe) {
-            isSwiping = true;
+          if (gameRunning && isTouching) {
+            e.preventDefault();
           }
         }, { passive: false });
 
         canvas.addEventListener('touchend', (e) => {
+          if (!gameRunning || !isTouching) {
+            isTouching = false;
+            return;
+          }
           e.preventDefault();
-
-          if (!touchStartX || !touchStartY) return;
-
+          
           const touchEndX = e.changedTouches[0].clientX;
           const touchEndY = e.changedTouches[0].clientY;
           const dx = touchEndX - touchStartX;
           const dy = touchEndY - touchStartY;
+          
+          const minSwipe = 20; // Distancia mínima reducida para mejor respuesta
 
-          const minSwipe = 25;
-
-          if (Math.abs(dx) < minSwipe && Math.abs(dy) < minSwipe) {
-            if (!gameStarted) {
-              initGame();
-            }
-          } else if (isSwiping) {
+          if (Math.abs(dx) > minSwipe || Math.abs(dy) > minSwipe) {
             let dir;
             if (Math.abs(dx) > Math.abs(dy)) {
               dir = dx > 0 ? 'right' : 'left';
@@ -688,10 +706,8 @@
             }
             handleDirection(dir);
           }
-
-          touchStartX = 0;
-          touchStartY = 0;
-          isSwiping = false;
+          
+          isTouching = false;
         }, { passive: false });
       }
 
@@ -739,7 +755,7 @@
               if (!isStartScreen) setActive('speedOptionsStart', index);
               else setActive('speedOptions', index);
               // Guardar preferencia
-              localStorage.setItem('neonSerpentSpeed', selectedSpeed);
+              localStorage.setItem('neonSerpentSpeed', selectedSpeed.toString());
             });
             container.appendChild(el);
           });
@@ -757,11 +773,14 @@
       // Cargar preferencia de velocidad
       const savedSpeed = localStorage.getItem('neonSerpentSpeed');
       if (savedSpeed) {
-        selectedSpeed = parseInt(savedSpeed);
-        // Encontrar el índice para activar el botón correcto
-        const speedIndex = speedLevels.findIndex(s => s.value === selectedSpeed);
-        if (speedIndex === -1) {
-          selectedSpeed = speedLevels[1].value; // Medio por defecto
+        const parsedSpeed = parseInt(savedSpeed);
+        if (!isNaN(parsedSpeed)) {
+          selectedSpeed = parsedSpeed;
+          // Encontrar el índice para activar el botón correcto
+          const speedIndex = speedLevels.findIndex(s => s.value === selectedSpeed);
+          if (speedIndex === -1) {
+            selectedSpeed = speedLevels[1].value; // Medio por defecto
+          }
         }
       }
 

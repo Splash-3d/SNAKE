@@ -4,46 +4,26 @@
 <meta charset="UTF-8">
 <title>Battle Arena Royale</title>
 <style>
-    body { margin: 0; background:#222; font-family: Arial; }
-    #game {
-        width: 420px; height: 740px;
-        margin: auto; background: #63c763;
-        border: 4px solid #000; position: relative;
-        overflow: hidden;
-    }
-    #elixirBar {
-        width: 100%; height: 30px; background: #333;
-        position: absolute; bottom: 0; left: 0;
-        display: flex; align-items: center; justify-content: center;
-        color: white; font-size: 18px;
-    }
-    .cardBar {
-        width: 100%; height: 110px;
-        position: absolute; bottom: 30px; left: 0;
-        background: rgba(0,0,0,0.4);
-        display: flex; justify-content: space-around; padding-top: 10px;
-    }
-    .card {
-        width: 80px; height: 100px; border-radius: 10px;
-        background: #fff; border: 3px solid #000;
-        display: flex; justify-content: center; align-items: center;
-        cursor: pointer; font-weight: bold; text-align: center;
-    }
-    .entity {
-        position: absolute; width: 30px; height: 30px;
-        border-radius: 50%; background: yellow; border: 2px solid black;
-        font-size: 12px; display: flex; justify-content: center; align-items: center;
-    }
-    .tower {
-        position: absolute; width: 60px; height: 80px;
-        background: #b5651d; border: 3px solid #000;
-        border-radius: 10px;
-        display: flex; align-items: center; justify-content: center;
-        font-weight: bold; color: white;
-    }
+body { margin: 0; font-family: Arial; background: #222; color: #fff; text-align:center;}
+#menu { width: 100%; height: 100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; background:#111;}
+.cardSelect { display:inline-block; width:80px; height:100px; margin:5px; border:3px solid #fff; border-radius:10px; cursor:pointer; display:flex; justify-content:center; align-items:center; text-align:center;}
+.cardSelect.selected { border-color:yellow; }
+#game { display:none; width:420px; height:740px; margin:auto; position:relative; background: #63c763; border:4px solid #000; overflow:hidden;}
+#elixirBar { width:100%; height:30px; background:#333; position:absolute; bottom:0; left:0; display:flex; justify-content:center; align-items:center; font-size:18px;}
+.cardBar { width:100%; height:110px; position:absolute; bottom:30px; left:0; background:rgba(0,0,0,0.4); display:flex; justify-content:space-around; padding-top:10px;}
+.card { width:80px; height:100px; border-radius:10px; background:#fff; border:3px solid #000; display:flex; justify-content:center; align-items:center; cursor:pointer; font-weight:bold; text-align:center;}
+.entity { position:absolute; width:30px; height:30px; border-radius:50%; background:yellow; border:2px solid black; font-size:12px; display:flex; justify-content:center; align-items:center;}
+.tower { position:absolute; width:60px; height:80px; background:#b5651d; border:3px solid #000; border-radius:10px; display:flex; align-items:center; justify-content:center; font-weight:bold; color:white;}
+.bridge { position:absolute; height:10px; background:#654321; }
 </style>
 </head>
 <body>
+
+<div id="menu">
+<h1>Selecciona tu mazo (8 cartas)</h1>
+<div id="cardPool"></div>
+<button id="startBtn">Empezar Partida</button>
+</div>
 
 <div id="game">
     <div id="elixirBar">Elixir: <span id="elixirValue">5</span>/10</div>
@@ -51,117 +31,159 @@
 </div>
 
 <script>
-/* ============================================================
-   SISTEMA DE CARTAS (NOMBRES MODIFICADOS PARA SER LEGALES)
-   ============================================================ */
-
+// ================== DEFINICION DE CARTAS ==================
 const ALL_CARDS = [
-    { name: "Coloso", type: "troop", cost: 5, hp: 2000, dmg: 120, speed: 0.6, target: "structure", color: "orange" },
-    { name: "Soldado", type: "troop", cost: 3, hp: 600, dmg: 90, speed: 1.1, target: "any", color: "blue" },
-    { name: "Arquera", type: "troop", cost: 3, hp: 350, dmg: 70, range: 120, speed: 1.0, target: "any", color: "pink" },
-    { name: "Brujiza", type: "troop", cost: 5, hp: 700, dmg: 50, range: 130, splash: true, speed: 1.0, target: "any", color:"purple" },
-    { name: "Duende rápido", type: "troop", cost: 2, hp: 250, dmg: 60, speed: 1.3, target: "any", color:"green" },
-    { name: "Meteorito", type: "spell", cost: 4, dmg: 300, radius: 70, color: "red" },
-    { name: "Rayo helado", type: "spell", cost: 2, dmg: 80, radius: 50, slow: 0.5, color:"cyan" },
-    { name: "Minidragón", type: "troop", cost: 4, hp: 850, dmg: 110, splash: true, target:"any", speed:1.0, color:"lightblue" }
+    {name:"Coloso", type:"troop", cost:5, hp:2000, dmg:120, speed:0.6, target:"structure", color:"orange"},
+    {name:"Soldado", type:"troop", cost:3, hp:600, dmg:90, speed:1.1, target:"any", color:"blue"},
+    {name:"Arquera", type:"troop", cost:3, hp:350, dmg:70, range:120, speed:1.0, target:"any", color:"pink"},
+    {name:"Brujiza", type:"troop", cost:5, hp:700, dmg:50, range:130, splash:true, speed:1.0, target:"any", color:"purple"},
+    {name:"Duende rápido", type:"troop", cost:2, hp:250, dmg:60, speed:1.3, target:"any", color:"green"},
+    {name:"Meteorito", type:"spell", cost:4, dmg:300, radius:70, color:"red"},
+    {name:"Rayo helado", type:"spell", cost:2, dmg:80, radius:50, slow:0.5, color:"cyan"},
+    {name:"Minidragón", type:"troop", cost:4, hp:850, dmg:110, splash:true, target:"any", speed:1.0, color:"lightblue"},
+    {name:"Hondero", type:"troop", cost:3, hp:400, dmg:100, range:140, target:"any", speed:1.0, color:"brown"},
+    {name:"Gólem de Hielo", type:"troop", cost:3, hp:700, dmg:60, speed:0.8, splash:true, target:"any", color:"lightcyan"}
 ];
 
-/* ============================================================
-   BARAJA DEL JUGADOR Y BARAJA DEL BOT
-   ============================================================ */
-const playerDeck = [];
+let playerDeck = [];
 const botDeck = [];
 
-function pickRandomDeck() {
+// ================== MENU DE SELECCION ==================
+const cardPool = document.getElementById("cardPool");
+ALL_CARDS.forEach((card,index)=>{
+    const div = document.createElement("div");
+    div.className="cardSelect";
+    div.style.background=card.color;
+    div.innerHTML=card.name;
+    div.onclick = ()=>{
+        if(div.classList.contains("selected")){
+            div.classList.remove("selected");
+            playerDeck = playerDeck.filter(c=>c!==card);
+        }else{
+            if(playerDeck.length<8){
+                div.classList.add("selected");
+                playerDeck.push(card);
+            }
+        }
+    };
+    cardPool.appendChild(div);
+});
+
+document.getElementById("startBtn").onclick=()=>{
+    if(playerDeck.length!==8){ alert("Selecciona 8 cartas"); return;}
+    startGame();
+};
+
+// ================== INICIO DE PARTIDA ==================
+let elixir = 5;
+let placing = null;
+const troops = [];
+const towers = {};
+const game = document.getElementById("game");
+const cardBar = document.getElementById("cardBar");
+
+function startGame(){
+    document.getElementById("menu").style.display="none";
+    game.style.display="block";
+
+    // Construir mazo de bot
     let cards = [...ALL_CARDS];
-    for (let i=0; i<8; i++) {
-        let choice = cards.splice(Math.floor(Math.random()*cards.length),1)[0];
-        playerDeck.push(choice);
-    }
-    cards = [...ALL_CARDS];
-    for (let i=0; i<8; i++) {
+    for(let i=0;i<8;i++){
         let choice = cards.splice(Math.floor(Math.random()*cards.length),1)[0];
         botDeck.push(choice);
     }
+
+    // Mostrar barra de cartas del jugador
+    playerDeck.forEach((card)=>{
+        const div = document.createElement("div");
+        div.className="card";
+        div.style.background=card.color;
+        div.innerHTML=card.name+"<br>("+card.cost+")";
+        div.onclick = ()=> playCard(card);
+        cardBar.appendChild(div);
+    });
+
+    // Crear torres
+    const towerPositions = [
+        {team:"player", x:50, y:640}, {team:"player", x:180, y:640}, {team:"player", x:310, y:640},
+        {team:"enemy", x:50, y:20}, {team:"enemy", x:180, y:20}, {team:"enemy", x:310, y:20}
+    ];
+    towerPositions.forEach(tp=>{
+        const t = document.createElement("div");
+        t.className="tower";
+        t.style.left=tp.x+"px"; t.style.top=tp.y+"px";
+        t.innerText="1500";
+        game.appendChild(t);
+        towers[tp.team+tp.x]= {hp:1500, el:t, x:tp.x, y:tp.y};
+    });
+
+    // Crear puentes
+    const bridges = [
+        {x:0, y:300, width:420, height:10}
+    ];
+    bridges.forEach(b=>{
+        const div = document.createElement("div");
+        div.className="bridge";
+        div.style.left=b.x+"px"; div.style.top=b.y+"px";
+        div.style.width=b.width+"px"; div.style.height=b.height+"px";
+        game.appendChild(div);
+    });
+
+    // Elixir
+    setInterval(()=>{
+        if(elixir<10) elixir+=0.1;
+        document.getElementById("elixirValue").innerText=elixir.toFixed(1);
+    },100);
+
+    // Loop de IA bot
+    setInterval(()=>{
+        if(Math.random()<0.02 && botDeck.length>0){
+            const card = botDeck[Math.floor(Math.random()*8)];
+            if(elixir>=card.cost){
+                elixir-=card.cost;
+                spawnTroop(card, 180+Math.random()*100-50, 150, "enemy");
+            }
+        }
+    },200);
+
+    // Loop principal de movimiento y combate
+    setInterval(gameLoop,60);
 }
-pickRandomDeck();
 
-/* ============================================================
-   UI DE CARTAS
-   ============================================================ */
-const cardBar = document.getElementById("cardBar");
-playerDeck.forEach((card, index)=>{
-    const div = document.createElement("div");
-    div.className = "card";
-    div.style.background = card.color;
-    div.innerHTML = card.name + "<br>(" + card.cost + ")";
-    div.onclick = ()=> playCard(card);
-    cardBar.appendChild(div);
-});
+// ================== JUGAR CARTA ==================
+function playCard(card){
+    if(elixir<card.cost) return;
+    placing=card;
 
-/* ============================================================
-   SISTEMA DE ELIXIR
-   ============================================================ */
-let elixir = 5;
-setInterval(()=> {
-    if (elixir < 10) elixir += 0.1;
-    document.getElementById("elixirValue").innerText = elixir.toFixed(1);
-}, 100);
-
-/* ============================================================
-   MAPA Y TORRES
-   ============================================================ */
-const game = document.getElementById("game");
-
-const towers = {
-    player: { x: 180, y: 620, hp: 1500 },
-    enemy: { x: 180, y: 40, hp: 1500 }
-};
-
-function createTower(team){
-    const t = document.createElement("div");
-    t.className = "tower";
-    t.style.left = towers[team].x+"px";
-    t.style.top  = towers[team].y+"px";
-    t.innerText = towers[team].hp;
-    game.appendChild(t);
-    towers[team].el = t;
+    game.onclick = function(e){
+        if(!placing) return;
+        const rect=game.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        if(placing.type==="troop")
+            spawnTroop(placing, x, y, "player");
+        else
+            castSpell(placing, x, y, "player");
+        elixir-=placing.cost;
+        placing=null;
+        game.onclick=null;
+    };
 }
-createTower("player");
-createTower("enemy");
 
-/* ============================================================
-   SISTEMA DE ENTIDADES (TROPAS)
-   ============================================================ */
-const troops = [];
-function spawnTroop(card, x, y, team){
-    const div = document.createElement("div");
-    div.className = "entity";
-    div.style.background = card.color;
-    div.style.left = x+"px";
-    div.style.top  = y+"px";
-    div.innerText = Math.floor(card.hp);
+// ================== ENTIDADES ==================
+function spawnTroop(card,x,y,team){
+    const div=document.createElement("div");
+    div.className="entity";
+    div.style.background=card.color;
+    div.style.left=x+"px"; div.style.top=y+"px";
+    div.innerText=Math.floor(card.hp);
     game.appendChild(div);
 
-    troops.push({
-        el: div,
-        x, y,
-        team,
-        hp: card.hp,
-        dmg: card.dmg,
-        speed: card.speed,
-        targetType: card.target,
-        range: card.range || 40,
-        splash: card.splash || false,
-        card
-    });
+    troops.push({el:div,x,y,team,hp:card.hp,dmg:card.dmg,speed:card.speed,card});
 }
 
-/* ============================================================
-   HECHIZOS
-   ============================================================ */
-function castSpell(card, x, y, team){
-    const circle = document.createElement("div");
+function castSpell(card,x,y,team){
+    const circle=document.createElement("div");
     circle.style.position="absolute";
     circle.style.left=(x-card.radius)+"px";
     circle.style.top=(y-card.radius)+"px";
@@ -171,107 +193,33 @@ function castSpell(card, x, y, team){
     circle.style.background=card.color;
     circle.style.opacity="0.6";
     game.appendChild(circle);
+    setTimeout(()=>circle.remove(),300);
 
-    setTimeout(()=> circle.remove(), 300);
-
-    // Daño
     troops.forEach(t=>{
-        const dx = t.x - x;
-        const dy = t.y - y;
-        if (Math.sqrt(dx*dx+dy*dy) < card.radius){
-            t.hp -= card.dmg;
-        }
+        const dx=t.x-x;
+        const dy=t.y-y;
+        if(Math.sqrt(dx*dx+dy*dy)<card.radius) t.hp-=card.dmg;
     });
 }
 
-/* ============================================================
-   JUGAR CARTAS DEL JUGADOR
-   ============================================================ */
-let placing = null;
-
-function playCard(card){
-    if (elixir < card.cost) return;
-    placing = card;
-
-    game.onclick = function(e){
-        if (!placing) return;
-        if (e.clientY < 350) return; // no colocar en lado enemigo
-        const rect = game.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-
-        if (placing.type === "troop")
-            spawnTroop(placing, x, 500, "player");
-        else
-            castSpell(placing, x, 400, "player");
-
-        elixir -= placing.cost;
-        placing = null;
-        game.onclick = null;
-    };
-}
-
-/* ============================================================
-   IA DEL BOT
-   ============================================================ */
-setInterval(()=>{
-    if (Math.random() < 0.02 && botDeck.length > 0){
-        const card = botDeck[Math.floor(Math.random()*8)];
-        if (elixir >= card.cost){
-            elixir -= card.cost;
-            if (card.type === "troop")
-                spawnTroop(card, 180 + Math.random()*100 - 50, 150, "enemy");
-            else
-                castSpell(card, 180, 250, "enemy");
-        }
-    }
-}, 200);
-
-/* ============================================================
-   LOOP PRINCIPAL: MOVIMIENTO Y COMBATE
-   ============================================================ */
-setInterval(()=>{
-    // mover tropas
+// ================== LOOP PRINCIPAL ==================
+function gameLoop(){
     troops.forEach(t=>{
-        if (t.hp <= 0){
-            t.el.remove();
-            troops.splice(troops.indexOf(t),1);
-            return;
-        }
-
-        // Update UI
-        t.el.innerText = Math.floor(t.hp);
-
-        // encontrar objetivo
-        let target = null;
-        let bestDist = Infinity;
-
-        // torres enemigas
-        const enemyTower = (t.team==="player"? towers.enemy : towers.player);
+        if(t.hp<=0){ t.el.remove(); troops.splice(troops.indexOf(t),1); return;}
+        t.el.innerText=Math.floor(t.hp);
+        // Movimiento simple hacia el enemigo central tower
+        const enemyTower = towers[(t.team==="player"?"enemy":"player")+180];
         let dx = enemyTower.x - t.x;
         let dy = enemyTower.y - t.y;
         let dist = Math.sqrt(dx*dx+dy*dy);
-
-        target = enemyTower;
-        bestDist = dist;
-
-        // movimiento hacia torre
-        if (bestDist > t.range){
-            t.x += dx/bestDist * t.speed;
-            t.y += dy/bestDist * t.speed;
-            t.el.style.left = t.x+"px";
-            t.el.style.top  = t.y+"px";
-        } else {
-            // Atacar
-            enemyTower.hp -= t.dmg;
-            enemyTower.el.innerText = enemyTower.hp;
-            if (enemyTower.hp <= 0){
-                alert(t.team === "player" ? "¡GANASTE!" : "Perdiste...");
-                location.reload();
-            }
+        if(dist>20){ t.x+=dx/dist*t.speed; t.y+=dy/dist*t.speed; t.el.style.left=t.x+"px"; t.el.style.top=t.y+"px";}
+        else{
+            enemyTower.hp-=t.dmg;
+            enemyTower.el.innerText=enemyTower.hp;
+            if(enemyTower.hp<=0){ alert(t.team==="player"?"¡GANASTE!":"Perdiste..."); location.reload();}
         }
     });
-}, 60);
-
+}
 </script>
 </body>
 </html>
